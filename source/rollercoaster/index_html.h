@@ -2,8 +2,11 @@ const char *s1 = R"=====(<html>
 <head>
 <script>
 	function startRecording() { 
-		fetch('/startRecording');
-	} 
+		fetch('/startRecording').then(response => response.text()).then(data => {
+      document.getElementById('status').innerText = data;
+      setTimeout(getData, 9000);
+    });
+	}
 
 	function getData() { 
 		// replace with /getData
@@ -49,10 +52,10 @@ const char *s1 = R"=====(<html>
           activePoints++;
         }
 
-        pointsX += `${point.millis/20+100}, ${200 - scale * point.x} `;
-        pointsY += `${point.millis/20+100}, ${200 - scale * point.y} `;
-        pointsZ += `${point.millis/20+100}, ${200 - scale * point.z} `;
-        pointsT += `${point.millis/20+100}, ${200 - scale * point.total} `;
+        pointsX += `${point.millis/10+100}, ${200 - scale * point.x} `;
+        pointsY += `${point.millis/10+100}, ${200 - scale * point.y} `;
+        pointsZ += `${point.millis/10+100}, ${200 - scale * point.z} `;
+        pointsT += `${point.millis/10+100}, ${200 - scale * point.total} `;
       });
       var plineX = document.getElementById("plineX"); plineX.setAttribute("points", pointsX);
       var plineY = document.getElementById("plineY"); plineY.setAttribute("points", pointsY);
@@ -67,8 +70,10 @@ const char *s1 = R"=====(<html>
       document.getElementById('maxY').innerText = maxY.toFixed(2) + ' g'; 
       document.getElementById('maxZ').innerText = maxZ.toFixed(2) + ' g'; 
       document.getElementById('maxT').innerText = maxTotal.toFixed(2) + ' g';
+
+      document.getElementById('status').innerText = "Klaar";
 		}); 
-	} 
+	}
 </script> 
 <style>
 body {
@@ -84,10 +89,10 @@ body {
 }
 
 .graph {
-  margin-left: 10%;
-
+  display: block; 
+  margin: auto;
   height: 500px;
-  width: 800px;
+  width: 950px;
 }
 
 .graph .grid {
@@ -154,6 +159,17 @@ circle.chart_data_4 {
 h1 { 
   text-align: center;
 }
+
+span.status {
+  font-size: x-large;
+}
+
+button {
+  height: 50px;
+  width: 250px;
+  font-size: large;
+}
+
 table {
   margin-left: 10%;
   border-collapse: collapse; /* Ensures borders do not double up */
@@ -180,24 +196,22 @@ th, td {
   <line x1="100" x2="100" y1="0" y2="400"></line>
 </g>
 <g class="grid y-grid" id="yGrid">
-  <line x1="100" x2="600" y1="0" y2="0"></line>
-  <line x1="100" x2="600" y1="100" y2="100"></line>
-  <line x1="100" x2="600" y1="200" y2="200"></line>
-  <line x1="100" x2="600" y1="300" y2="300"></line>
-  <line x1="100" x2="600" y1="400" y2="400"></line>
+  <line x1="100" x2="900" y1="0" y2="0"></line>
+  <line x1="100" x2="900" y1="100" y2="100"></line>
+  <line x1="100" x2="900" y1="200" y2="200"></line>
+  <line x1="100" x2="900" y1="300" y2="300"></line>
+  <line x1="100" x2="900" y1="400" y2="400"></line>
 </g>
 <g class="labels x-labels">
   <text x="100" y="420">0</text>
-  <text x="150" y="420">1</text>
-  <text x="200" y="420">2</text>
-  <text x="250" y="420">3</text>
-  <text x="300" y="420">4</text>
-  <text x="350" y="420">5</text>
-  <text x="400" y="420">6</text>
-  <text x="450" y="420">7</text>
-  <text x="500" y="420">8</text>
-  <text x="550" y="420">9</text>
-  <text x="600" y="420">10</text>
+  <text x="200" y="420">1</text>
+  <text x="300" y="420">2</text>
+  <text x="400" y="420">3</text>
+  <text x="500" y="420">4</text>
+  <text x="600" y="420">5</text>
+  <text x="700" y="420">6</text>
+  <text x="800" y="420">7</text>
+  <text x="900" y="420">8</text>
   <text x="400" y="440" class="label-title">Tijd in seconden</text>
 </g>
 <g class="labels line-labels">
@@ -239,7 +253,8 @@ th, td {
 </svg>
 
 <div style="margin-left: 10%;">
-  <button onclick="startRecording();">Start Recording</button> &nbsp; &nbsp; <button onclick="getData();">Get Data</button>
+  <button onclick="startRecording();">Start Recording</button> &nbsp; &nbsp; &nbsp; &nbsp;
+  <span class="status"> Status: </span><span class="status" id="status">klaar</span>
 </div>
 <br /><br />
 

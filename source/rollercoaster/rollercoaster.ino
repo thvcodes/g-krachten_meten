@@ -4,6 +4,8 @@
 #include <Wire.h>
 #include "index_html.h"
 
+// Board: ESP32 Dev module
+
 // Access Point instellingen
 const char* ssid = "ESP32_AccessPoint";
 const char* password = "12345678"; // Minimaal 8 tekens
@@ -23,8 +25,8 @@ struct DataPoint {
 };
 
 // Define the size of the array
-const int arraySize = 1000;
-const int interval = 10;
+const int arraySize = 1600;
+const int interval = 5;
 int currentIndex = 0;
 
 // Create an array of DataPoint objects
@@ -87,29 +89,27 @@ void handleClient(){
       client.println("Started");
     }
     else if (request.indexOf("getData") >= 0) {
-      // Verstuur de data in JSON-formaat
-      String json = "{";
-      
-      json += "\"datapoints\":[";
-      for (int i = 0; i < arraySize; i++) {
-        json += "{";
-        json += "\"millis\":" + String(dataArray[i].timestamp) + ",";
-        json += "\"x\":" + String(dataArray[i].x, 2) + ",";
-        json += "\"y\":" + String(dataArray[i].y, 2) + ",";
-        json += "\"z\":" + String(dataArray[i].z, 2);
-        json += "}";
-        if (i < arraySize-1) {
-          json += ",";
-        }
-      }
-      json += "]}";
-
       client.println("HTTP/1.1 200 OK");
       client.println("Content-Type: application/json");
       client.println("Connection: close");
       client.println();
-      client.println(json);
+      
+      // Verstuur de data in JSON-formaat
+      client.println("{");
+      client.println("\"datapoints\":[");
+      client.println();
+      for (int i = 0; i < arraySize; i++) {
+        if (i > 0) {
+          client.print(",");
+        }
+        client.println(" {\"millis\":" + String(dataArray[i].timestamp) + ", \"x\":" + String(dataArray[i].x, 2) + ", \"y\":" + String(dataArray[i].y, 2) + ", \"z\":" + String(dataArray[i].z, 2) + "}");
+      }
+      client.println("]}");
     } else {
+      client.println("HTTP/1.1 200 OK");
+      client.println("Content-Type: text/html");
+      client.println("Connection: close");
+      client.println();
       client.print(s1);
     }
     client.stop();
