@@ -2,6 +2,7 @@
 #include <Adafruit_MPU6050.h>
 #include <Adafruit_Sensor.h>
 #include <Wire.h>
+#include "index_html.h"
 
 // Access Point instellingen
 const char* ssid = "ESP32_AccessPoint";
@@ -13,14 +14,24 @@ Adafruit_MPU6050 mpu;
 // Webserver poort
 WiFiServer server(80);
 
-// Variabelen voor het bijhouden van de max, min en gemiddelde waarden
-float maxX = -1000.0, minX = 1000.0;
-float maxY = -1000.0, minY = 1000.0;
-float maxZ = -1000.0, minZ = 1000.0;
-float sumX = 0, sumY = 0, sumZ = 0;
-int count = 0;
+// Define a struct for the object
+struct DataPoint {
+  unsigned long timestamp; // millis() value
+  float x;
+  float y;
+  float z;
+};
 
-//setup, dus doet hij 1 keer
+// Define the size of the array
+const int arraySize = 1000;
+const int interval = 10;
+int currentIndex = 0;
+
+// Create an array of DataPoint objects
+DataPoint dataArray[arraySize];
+bool started = false;
+
+// setup, dus doet hij 1 keer
 void setup() {
     Serial.begin(115200);
 
@@ -39,7 +50,7 @@ void setup() {
     // Initialiseer MPU6050
     if (!mpu.begin()) {
         Serial.println("Kan MPU6050 niet detecteren. Controleer verbindingen!");
-        while (1);
+        while (true);
     }
 
     // Stel het versnellingsbereik in op ±16g
@@ -48,111 +59,93 @@ void setup() {
 
 //loop, dus doet het programma keer na keer door totdat het programma zelf stopt
 void loop() {
-    // Wacht op een client
-    WiFiClient client = server.available();
-    if (client) {
-        String request = client.readStringUntil('\r');
-        client.flush();
+  
+  // Doe meting
+  if(started) {
+    recordDatapoints();
+  }
 
-        // Controleer het aangevraagde pad
-        if (request.indexOf("/getData") >= 0) {
-            // Lees sensorgegevens
-            sensors_event_t a, g, temp;
-            mpu.getEvent(&a, &g, &temp);
+  // Wacht op een client
+  handleClient();
+}
 
-            // Bereken g-krachten
-            float ax_g = a.acceleration.x / 9.81;
-            float ay_g = a.acceleration.y / 9.81;
-            float az_g = a.acceleration.z / 9.81;
+void handleClient(){
+  WiFiClient client = server.available();
 
-            // Update de maximale en minimale waarden
-            maxX = max(maxX, ax_g);
-            minX = min(minX, ax_g);
+  if (client) {
+    String request = client.readStringUntil('\r');
+    client.flush();
 
-            maxY = max(maxY, ay_g);
-            minY = min(minY, ay_g);
-
-            maxZ = max(maxZ, az_g);
-            minZ = min(minZ, az_g);
-
-            // Bereken de gemiddelde waarden
-            sumX += ax_g;
-            sumY += ay_g;
-            sumZ += az_g;
-            count++;
-
-            float avgX = sumX / count;
-            float avgY = sumY / count;
-            float avgZ = sumZ / count;
-
-            // Verstuur de data in JSON-formaat
-            String json = "{";
-            json += "\"x\":" + String(ax_g, 2) + ",";
-            json += "\"y\":" + String(ay_g, 2) + ",";
-            json += "\"z\":" + String(az_g, 2) + ",";
-            json += "\"maxX\":" + String(maxX, 2) + ",";
-            json += "\"minX\":" + String(minX, 2) + ",";
-            json += "\"maxY\":" + String(maxY, 2) + ",";
-            json += "\"minY\":" + String(minY, 2) + ",";
-            json += "\"maxZ\":" + String(maxZ, 2) + ",";
-            json += "\"minZ\":" + String(minZ, 2) + ",";
-            json += "\"avgX\":" + String(avgX, 2) + ",";
-            json += "\"avgY\":" + String(avgY, 2) + ",";
-            json += "\"avgZ\":" + String(avgZ, 2);
-            json += "}";
-
-            client.println("HTTP/1.1 200 OK");
-            client.println("Content-Type: application/json");
-            client.println("Connection: close");
-            client.println();
-            client.println(json);
-        } else {
-            // HTML-pagina versturen
-            client.println("HTTP/1.1 200 OK");
-            client.println("Content-Type: text/html");
-            client.println("Connection: close");
-            client.println();
-            client.println("<!DOCTYPE HTML>");
-            client.println("<html>");
-            client.println("<head>");
-            client.println("<title>ESP32 G-Krachten</title>");
-            client.println("<script>");
-            client.println("function fetchData() {");
-            client.println("  fetch('/getData').then(response => response.json()).then(data => {");
-            client.println("    document.getElementById('xValue').innerText = data.x + ' g';");
-            client.println("    document.getElementById('yValue').innerText = data.y + ' g';");
-            client.println("    document.getElementById('zValue').innerText = data.z + ' g';");
-            client.println("    document.getElementById('maxX').innerText = data.maxX + ' g';");
-            client.println("    document.getElementById('minX').innerText = data.minX + ' g';");
-            client.println("    document.getElementById('maxY').innerText = data.maxY + ' g';");
-            client.println("    document.getElementById('minY').innerText = data.minY + ' g';");
-            client.println("    document.getElementById('maxZ').innerText = data.maxZ + ' g';");
-            client.println("    document.getElementById('minZ').innerText = data.minZ + ' g';");
-            client.println("    document.getElementById('avgX').innerText = data.avgX + ' g';");
-            client.println("    document.getElementById('avgY').innerText = data.avgY + ' g';");
-            client.println("    document.getElementById('avgZ').innerText = data.avgZ + ' g';");
-            client.println("  });");
-            client.println("}");
-            client.println("setInterval(fetchData, 500);"); // Elke 500 ms data ophalen
-            client.println("</script>");
-            client.println("</head>");
-            client.println("<body>");
-            client.println("<h1>Real-time G-Krachten</h1>");
-            client.println("<p><b>Huidige G-krachten:</b></p>");
-            client.println("<p>X: <span id='xValue'>Laden...</span></p>");
-            client.println("<p>Y: <span id='yValue'>Laden...</span></p>");
-            client.println("<p>Z: <span id='zValue'>Laden...</span></p>");
-            client.println("<p><b>Max en Min G-krachten:</b></p>");
-            client.println("<p>Max X: <span id='maxX'>Laden...</span> | Min X: <span id='minX'>Laden...</span></p>");
-            client.println("<p>Max Y: <span id='maxY'>Laden...</span> | Min Y: <span id='minY'>Laden...</span></p>");
-            client.println("<p>Max Z: <span id='maxZ'>Laden...</span> | Min Z: <span id='minZ'>Laden...</span></p>");
-            client.println("<p><b>Gemiddelde G-krachten:</b></p>");
-            client.println("<p>Gemiddelde X: <span id='avgX'>Laden...</span></p>");
-            client.println("<p>Gemiddelde Y: <span id='avgY'>Laden...</span></p>");
-            client.println("<p>Gemiddelde Z: <span id='avgZ'>Laden...</span></p>");
-            client.println("</body>");
-            client.println("</html>");
-        }
-        client.stop();
+    // Controleer het aangevraagde pad
+    if (request.indexOf("startRecording") >= 0) {
+      started = true;
+      // HTML-pagina versturen
+      client.println("HTTP/1.1 200 OK");
+      client.println("Content-Type: text/plain");
+      client.println("Connection: close");
+      client.println();
+      client.println("Started");
     }
+    else if (request.indexOf("getData") >= 0) {
+      // Verstuur de data in JSON-formaat
+      String json = "{";
+      
+      json += "\"datapoints\":[";
+      for (int i = 0; i < arraySize; i++) {
+        json += "{";
+        json += "\"millis\":" + String(dataArray[i].timestamp) + ",";
+        json += "\"x\":" + String(dataArray[i].x, 2) + ",";
+        json += "\"y\":" + String(dataArray[i].y, 2) + ",";
+        json += "\"z\":" + String(dataArray[i].z, 2);
+        json += "}";
+        if (i < arraySize-1) {
+          json += ",";
+        }
+      }
+      json += "]}";
+
+      client.println("HTTP/1.1 200 OK");
+      client.println("Content-Type: application/json");
+      client.println("Connection: close");
+      client.println();
+      client.println(json);
+    } else {
+      client.print(s1);
+    }
+    client.stop();
+  }
+}
+
+void recordDatapoints() {
+  unsigned long startTimestamp = millis();
+
+  for (int i = 0; i < arraySize; i++) {
+    // Haal sensor meting
+    sensors_event_t a, g, temp;
+    mpu.getEvent(&a, &g, &temp);
+
+    // Bereken g-krachten
+    float ax_g = a.acceleration.x / 9.81;
+    float ay_g = a.acceleration.y / 9.81;
+    float az_g = a.acceleration.z / 9.81;
+
+    dataArray[i].timestamp = (i * interval);
+    dataArray[i].x = ax_g;
+    dataArray[i].y = ay_g;
+    dataArray[i].z = az_g;
+
+    // Wacht voor volgende meting
+    unsigned long waitUntil = startTimestamp + ( (i+1) * interval);
+    signed long waitFor = waitUntil - millis();
+
+    Serial.print(String(i));
+    Serial.print(", wait for: ");
+    Serial.println(String(waitFor));
+
+    if(waitFor>0) {
+      delay(waitFor);
+    }
+  }
+
+  started = false;
 }
