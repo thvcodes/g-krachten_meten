@@ -2,14 +2,15 @@ const char *s1 = R"=====(<html>
 <head>
 <script>
 	function startRecording() { 
-		fetch('/startRecording').then(response => response.text()).then(data => {
+    setCircle(1, 'off'); setCircle(2, 'off'); setCircle(3, 'off'); setCircle(4, 'off');
+
+    fetch('/startRecording').then(response => response.text()).then(data => {
       document.getElementById('status').innerText = data;
       setTimeout(getData, 9000);
     });
 	}
 
 	function getData() { 
-		// replace with /getData
 		fetch("/getData.json").then(response => response.json()).then(data => { 
 			var pointsX = "";
 			var pointsY = "";
@@ -43,7 +44,7 @@ const char *s1 = R"=====(<html>
         if (Math.abs(point.z) > maxZ) maxZ = Math.abs(point.z);
         if (point.total > maxTotal) maxTotal = point.total;
 
-        // avg when moving
+        // avg als beweegt
         if(point.total > 1.2) {
           avgX += Math.abs(point.x);
           avgY += Math.abs(point.y);
@@ -57,11 +58,14 @@ const char *s1 = R"=====(<html>
         pointsZ += `${point.millis/10+100}, ${200 - scale * point.z} `;
         pointsT += `${point.millis/10+100}, ${200 - scale * point.total} `;
       });
-      var plineX = document.getElementById("plineX"); plineX.setAttribute("points", pointsX);
-      var plineY = document.getElementById("plineY"); plineY.setAttribute("points", pointsY);
-      var plineZ = document.getElementById("plineZ"); plineZ.setAttribute("points", pointsZ);
-      var plineT = document.getElementById("plineT"); plineT.setAttribute("points", pointsT);
+      var plineX = document.getElementById("pline1"); plineX.setAttribute("points", pointsX); setCircle(1, 'on');
+      var plineY = document.getElementById("pline2"); plineY.setAttribute("points", pointsY); setCircle(2, 'on');
+      var plineZ = document.getElementById("pline3"); plineZ.setAttribute("points", pointsZ); setCircle(3, 'on');
+      var plineT = document.getElementById("pline4"); plineT.setAttribute("points", pointsT); setCircle(4, 'on');
 
+      if(activePoints == 0) {
+        activePoints = 1; 
+      }
       document.getElementById('avgX').innerText = (avgX/activePoints).toFixed(2) + ' g'; 
       document.getElementById('avgY').innerText = (avgY/activePoints).toFixed(2) + ' g'; 
       document.getElementById('avgZ').innerText = (avgZ/activePoints).toFixed(2) + ' g'; 
@@ -72,8 +76,30 @@ const char *s1 = R"=====(<html>
       document.getElementById('maxT').innerText = maxTotal.toFixed(2) + ' g';
 
       document.getElementById('status').innerText = "Klaar";
-		}); 
-	}
+		});
+  }
+ 
+  function setCircle(circleId, state) {
+    var circle = document.getElementById(`circle${circleId}`);
+    var pline = document.getElementById(`pline${circleId}`);
+    if(state === 'on') {
+      circle.classList.add(`chart_data_${circleId}_filled`);
+      pline.style.display = "";
+    } else {
+      circle.classList.remove(`chart_data_${circleId}_filled`);
+      pline.style.display = "none";
+    }
+  }
+
+  function circleClicked(circleId) {
+    var circle = document.getElementById(`circle${circleId}`);
+    if(circle.classList.contains(`chart_data_${circleId}_filled`)) {
+      setCircle(circleId, 'off');
+    } else {
+      setCircle(circleId, 'on');
+    }
+  }
+
 </script> 
 <style>
 body {
@@ -112,47 +138,35 @@ body {
   fill: black;
 }
 
-.data {
-  fill: red;
-  stroke-width: 1; 
-}
-.data1 {
-  fill: green;
-  stroke-width: 1; 
-}
-
-.chart_circle1 {
-    stroke: #0074d9;
-    stroke-width: 1px;
-    opacity: 0;
-}
-
-.chart_circle1:hover {
-    opacity: 1;
-}
-
 .chart_data_1 {
   stroke: #0074D9;
+  fill: none;
 }
-circle.chart_data_1 {
+circle.chart_data_1_filled {
   fill: #0074D9;
 }
+
 .chart_data_2 {
     stroke: #FF851B;
+    fill: none;
 }
-circle.chart_data_2 {
+circle.chart_data_2_filled {
   fill: #FF851B;
 }
+
 .chart_data_3 {
     stroke: #2ECC40;
+    fill: none;
 }
-circle.chart_data_3 {
+circle.chart_data_3_filled {
   fill: #2ECC40;
 }
+
 .chart_data_4 {
-    stroke: #B10DC9;
+  stroke: #B10DC9;
+  fill: none;
 }
-circle.chart_data_4 {
+circle.chart_data_4_filled {
   fill: #B10DC9;
 }
 
@@ -187,107 +201,93 @@ th, td {
 
 </head>
 <body>
-
   <h1>Miniatuur achtbaan</h1><br/>
 
-<svg version="1.2" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" class="graph" aria-labelledby="title" role="img">
-  <title id="title">Overzicht G krachten over de tijd</title>
-<g class="grid x-grid" id="xGrid">
-  <line x1="100" x2="100" y1="0" y2="400"></line>
-</g>
-<g class="grid y-grid" id="yGrid">
-  <line x1="100" x2="900" y1="0" y2="0"></line>
-  <line x1="100" x2="900" y1="100" y2="100"></line>
-  <line x1="100" x2="900" y1="200" y2="200"></line>
-  <line x1="100" x2="900" y1="300" y2="300"></line>
-  <line x1="100" x2="900" y1="400" y2="400"></line>
-</g>
-<g class="labels x-labels">
-  <text x="100" y="420">0</text>
-  <text x="200" y="420">1</text>
-  <text x="300" y="420">2</text>
-  <text x="400" y="420">3</text>
-  <text x="500" y="420">4</text>
-  <text x="600" y="420">5</text>
-  <text x="700" y="420">6</text>
-  <text x="800" y="420">7</text>
-  <text x="900" y="420">8</text>
-  <text x="400" y="440" class="label-title">Tijd in seconden</text>
-</g>
-<g class="labels line-labels">
-  <circle cx="100" cy="455" data-value="X" r="10" class="chart_data_1"></circle>
-  <text x="115" y="460">X</text>
-  <circle cx="150" cy="455" data-value="X" r="10" class="chart_data_2"></circle>
-  <text x="165" y="460">Y</text>
-  <circle cx="200" cy="455" data-value="X" r="10" class="chart_data_3"></circle>
-  <text x="215" y="460">Z</text>
-  <circle cx="250" cy="455" data-value="X" r="10" class="chart_data_4"></circle>
-  <text x="265" y="460">Totaal</text>
-</g>
-<g class="labels y-labels">
-  <text x="80" y="10" id="y0">4</text>
-  <text x="80" y="110" id="y1">2</text>
-  <text x="80" y="210">0</text>
-  <text x="80" y="310" id="y2">-2</text>
-  <text x="80" y="400" id="y3">-4</text>
-  <text x="80" y="160" class="label-title">G kracht</text>
-</g>
-<!-- <g class="data" data-setname="Our first data set">
-  <circle cx="90" cy="192" data-value="7.2" r="4"></circle>
-  <circle cx="240" cy="141" data-value="8.1" r="4"></circle>
-  <circle cx="388" cy="179" data-value="7.7" r="4"></circle>
-  <circle cx="531" cy="200" data-value="6.8" r="4"></circle>
-  <circle cx="677" cy="104" data-value="6.7" r="4"></circle>
-</g> -->
+  <svg version="1.2" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" class="graph" aria-labelledby="title" role="img">
+    <title id="title">Overzicht G krachten over de tijd</title>
+    <g class="grid x-grid" id="xGrid">
+      <line x1="100" x2="100" y1="0" y2="400"></line>
+    </g>
+    <g class="grid y-grid" id="yGrid">
+      <line x1="100" x2="900" y1="0" y2="0"></line>
+      <line x1="100" x2="900" y1="100" y2="100"></line>
+      <line x1="100" x2="900" y1="200" y2="200"></line>
+      <line x1="100" x2="900" y1="300" y2="300"></line>
+      <line x1="100" x2="900" y1="400" y2="400"></line>
+    </g>
+    <g class="labels x-labels">
+      <text x="100" y="420">0</text>
+      <text x="200" y="420">1</text>
+      <text x="300" y="420">2</text>
+      <text x="400" y="420">3</text>
+      <text x="500" y="420">4</text>
+      <text x="600" y="420">5</text>
+      <text x="700" y="420">6</text>
+      <text x="800" y="420">7</text>
+      <text x="900" y="420">8</text>
+      <text x="400" y="440" class="label-title">Tijd in seconden</text>
+    </g>
+    <g class="labels line-labels">
+      <circle id="circle1" cx="100" cy="455" data-value="X" r="10" class="chart_data_1" pointer-events="visible" onclick="circleClicked(1)"></circle>
+      <text id="text1" x="115" y="460" onclick="circleClicked(1)">X</text>
+      <circle id="circle2" cx="150" cy="455" data-value="X" r="10" class="chart_data_2" pointer-events="visible" onclick="circleClicked(2)"></circle>
+      <text id="text2" x="165" y="460" onclick="circleClicked(2)">Y</text>
+      <circle id="circle3" cx="200" cy="455" data-value="X" r="10" class="chart_data_3" pointer-events="visible" onclick="circleClicked(3)"></circle>
+      <text id="text3" x="215" y="460" onclick="circleClicked(3)">Z</text>
+      <circle id="circle4" cx="250" cy="455" data-value="X" r="10" class="chart_data_4" pointer-events="visible" onclick="circleClicked(4)"></circle>
+      <text id="text4" x="265" y="460" onclick="circleClicked(4)">Totaal</text>
+    </g>
+    <g class="labels y-labels">
+      <text x="80" y="10" id="y0">4</text>
+      <text x="80" y="110" id="y1">2</text>
+      <text x="80" y="210">0</text>
+      <text x="80" y="310" id="y2">-2</text>
+      <text x="80" y="400" id="y3">-4</text>
+      <text x="80" y="160" class="label-title">G kracht</text>
+    </g>
 
-<polyline id="plineX" fill="none" class="chart_data_1" stroke-width="2" points="" />
-<polyline id="plineY" fill="none" class="chart_data_2" stroke-width="2" points="" />
-<polyline id="plineZ" fill="none" class="chart_data_3" stroke-width="2" points="" />
-<polyline id="plineT" fill="none" class="chart_data_4" stroke-width="2" points="" />
+    <polyline id="pline1" fill="none" class="chart_data_1" stroke-width="2" points="" />
+    <polyline id="pline2" fill="none" class="chart_data_2" stroke-width="2" points="" />
+    <polyline id="pline3" fill="none" class="chart_data_3" stroke-width="2" points="" />
+    <polyline id="pline4" fill="none" class="chart_data_4" stroke-width="2" points="" />
+  </svg>
 
-<g>
-	<circle class="chart_circle1" cx="120" cy="60" r="4" />
-	<title>60</title>
-</g>
+  <div style="margin-left: 10%;">
+    <button onclick="startRecording();">Start Recording</button> &nbsp; &nbsp; &nbsp; &nbsp;
+    <span class="status"> Status: </span><span class="status" id="status">klaar</span>
+  </div>
+  <br /><br />
 
-</svg>
+  <table>
+    <tr>
+      <th>G kracht</th>
+      <th>X</th>
+      <th>Y</th>
+      <th>Z</th>
+      <th>Totaal</th>
+    </tr>
+    <tr>
+      <td>Gemiddeld</td>
+      <td><span id="avgX">-</span></td>
+      <td><span id="avgY">-</span></td>
+      <td><span id="avgZ">-</span></td>
+      <td><span id="avgT">-</span></td>
+    </tr>
+    <tr>
+      <td>Maximaal</td>
+      <td><span id="maxX">-</span></td>
+      <td><span id="maxY">-</span></td>
+      <td><span id="maxZ">-</span></td>
+      <td><span id="maxT">-</span></td>
+    </tr>
+  </table>
 
-<div style="margin-left: 10%;">
-  <button onclick="startRecording();">Start Recording</button> &nbsp; &nbsp; &nbsp; &nbsp;
-  <span class="status"> Status: </span><span class="status" id="status">klaar</span>
-</div>
-<br /><br />
-
-<table>
-  <tr>
-    <th>G kracht</th>
-    <th>X</th>
-    <th>Y</th>
-    <th>Z</th>
-    <th>Totaal</th>
-  </tr>
-  <tr>
-    <td>Gemiddeld</td>
-    <td><span id="avgX">-</span></td>
-    <td><span id="avgY">-</span></td>
-    <td><span id="avgZ">-</span></td>
-    <td><span id="avgT">-</span></td>
-  </tr>
-  <tr>
-    <td>Maximaal</td>
-    <td><span id="maxX">-</span></td>
-    <td><span id="maxY">-</span></td>
-    <td><span id="maxZ">-</span></td>
-    <td><span id="maxT">-</span></td>
-  </tr>
-</table>
-
-<br/><br/>
-<!-- 
-https://css-tricks.com/how-to-make-charts-with-svg/
-https://claudiorimann.com/svg-charts-without-javascript-part-1/
-https://www.w3schools.com/graphics/svg_path.asp
- -->
+  <br/><br/>
+  <!-- 
+  https://css-tricks.com/how-to-make-charts-with-svg/
+  https://claudiorimann.com/svg-charts-without-javascript-part-1/
+  https://www.w3schools.com/graphics/svg_path.asp
+  -->
 
 </body>
 </html>)=====";
